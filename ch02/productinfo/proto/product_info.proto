@@ -1,0 +1,18 @@
+syntax = "proto3"; //  指定所使用的 protocol buffers 版本
+package ecommerce; // 防止协议消息之间的命名冲突
+
+service ProductInfo { // 服务接口的定义
+  rpc addProduct(Product) returns (ProductID);
+  rpc getProduct(ProductID) returns (Product);
+}
+
+message Product { // Product 消息类型方法
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+
+message ProductID {
+  string value = 1;
+}
