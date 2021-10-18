@@ -132,9 +132,32 @@ type wrappedStream struct { // grpc.ServerStream 的包装器流
 	grpc.ServerStream
 }
 
+// RecvMsg 处理流接收到的消息
 func (w *wrappedStream) RecvMsg(m interface{}) error {
 	log.Printf("======= [Server Stream Interceptor Wrapper] "+"Receive a message (Type: %T) at %s", m, time.Now().Format(time.RFC3339))
 	return w.ServerStream.RecvMsg(m)
+}
+
+// SendMsg 处理流发送的消息
+func (w *wrappedStream) SendMsg(m interface{}) error {
+	log.Printf("======= [Server Stream Interceptor Wrapper] "+" Send a message (Type: %T) at %v", m,
+		time.Now().Format(time.RFC3339))
+	return w.ServerStream.SendMsg(m)
+}
+
+// 创建新包装器流的实例
+func newWrappedStream(s grpc.ServerStream) grpc.ServerStream {
+	return &wrappedStream{s}
+}
+
+// 流拦截器的实现
+func orderServerStreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	log.Println("======= [Server Stream Interceptor] ", info.FullMethod)
+	err := handler(srv, newWrappedStream(ss))
+	if err != nil {
+		log.Printf("RPC failed with error %v", err)
+	}
+	return err
 }
 
 func main() {
@@ -143,7 +166,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer(grpc.UnaryInterceptor(orderUnaryServerInterceptor)) // 注册一元拦截器
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(orderUnaryServerInterceptor),   // 注册一元拦截器
+		grpc.StreamInterceptor(orderServerStreamInterceptor), // 注册流拦截器
+	)
 	pb.RegisterOrderManagementServer(s, &server{})
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)

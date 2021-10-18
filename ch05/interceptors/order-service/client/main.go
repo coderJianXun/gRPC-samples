@@ -15,13 +15,13 @@ const (
 )
 
 func main() {
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	conn, err := grpc.Dial(address, grpc.WithInsecure(),grpc.WithUnaryInterceptor(orderUnaryClientInterceptor)) // 传入一元拦截器
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 	orderMgtClient := pb.NewOrderManagementClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), 30* time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// 获取订单
@@ -108,4 +108,14 @@ func asyncClientBidirectionalRPC(streamProcOrder pb.OrderManagement_ProcessOrder
 		log.Print("Combined shipment : ", combinedShipment.OrdersList)
 	}
 	<-c
+}
+
+// gRPC 客户端一元拦截器
+// RPC 上下文、方法字符串、要发送的请求、CallOption 配置
+func orderUnaryClientInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn,
+	invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	log.Println("Method: " + method)
+	err := invoker(ctx, method, req, reply, cc, opts...) // 通过 UnaryInvoker 调用 RPC 方法
+	log.Println(reply)
+	return err
 }
