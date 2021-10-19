@@ -1,0 +1,32 @@
+// protoc -I proto proto/product_info.proto --go_out=plugins=grpc:./server/ecommerce
+// -I 或者 --proto_path 标记 proto 文件的目录路径
+// --go_out 指定要生成的代码存放目录
+syntax = "proto3"; //  指定所使用的 protocol buffers 版本
+// wget https://github.com/protocolbuffers/protobuf/releases/download/v3.8.0/protoc-3.8.0-linux-x86_64.zip
+// unzip protoc-3.8.0-linux-x86_64.zip
+// cp bin/protoc /usr/bin/
+// cp -r include/google /usr/include/
+import "google/protobuf/wrappers.proto";
+package ecommerce; // 防止协议消息之间的命名冲突
+
+service OrderManagement {// 服务接口的定义
+  rpc getOrder(google.protobuf.StringValue) returns (Order); // 一元 RPC
+  rpc searchOrders(google.protobuf.StringValue) returns (stream Order); // 服务端流 RPC
+  rpc updateOrders(stream Order) returns (google.protobuf.StringValue); // 客户端 RPC
+  rpc processOrders(stream google.protobuf.StringValue) returns (stream CombinedShipment); // 双向流 RPC
+  rpc addOrder(Order) returns (google.protobuf.StringValue);
+}
+
+message Order {
+  string id = 1;
+  repeated string items = 2; // 使用 repeated 说明这个字段在消息中可以重复出现任意次数
+  string description = 3;
+  float price = 4;
+  string destination = 5;
+}
+
+message CombinedShipment {
+  string id = 1;
+  string status = 2;
+  repeated Order ordersList = 3;
+}
